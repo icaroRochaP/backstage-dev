@@ -1,26 +1,46 @@
-# Use uma imagem base com Node.js e Yarn
-FROM node:18-slim
+# --- Stage 1: Build ---
+# Usa a imagem do Node para construir o projeto.
+FROM node:18-slim as build
 
-# Defina o diretório de trabalho
+# Define o diretório de trabalho.
 WORKDIR /app
 
-# Habilite o Corepack
+# Habilita o Corepack.
 RUN corepack enable
 
-# Copie apenas os arquivos de configuração de dependências
+# Copia os arquivos de configuração do projeto.
 COPY package.json yarn.lock ./
 
-# Instale as dependências
-RUN yarn install
+# Instala as dependências.
+RUN yarn install --immutable --immutable-cache
 
-# Copie o restante do código
+# Copia o restante do código.
 COPY . .
 
-# Construa a aplicação (esta é a linha que mudou)
-RUN yarn build --filter=...
+# Faz a build das aplicações.
+RUN yarn tsc
+RUN yarn build:api
+RUN yarn build
 
-# Exponha a porta que o Backstage usa
+# --- Stage 2: Final ---
+# Usa uma imagem mais leve para o contêiner final.
+FROM node:18-slim
+
+# Define o diretório de trabalho.
+WORKDIR /app
+
+# Copia a aplicação construída do estágio anterior.
+COPY --from=build /app/packages/backend/dist ./packages/backend/dist
+COPY --from=build /app/packages/backend/dist-types ./packages/backend/dist-types
+COPY --from=build /app/packages/app/dist ./packages/app/dist
+
+# Copia arquivos de configuração e outros recursos necessários.
+COPY --from=build /app/app-config.yaml ./
+COPY --from=build /app/package.json ./
+COPY --from=build /app/yarn.lock ./
+COPY --from=build /app/.yarn ./.yarn
+COPY --from=build /app/.pnp.* ./
+
+# Expõe a porta e define o comando de execução.
 EXPOSE 7007
-
-# Defina o comando para rodar a aplicação
-CMD ["yarn", "start"]
+CMD ["yarn", "start-backend"]
