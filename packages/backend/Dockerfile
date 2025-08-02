@@ -34,17 +34,18 @@ ENV TZ=America/Sao_Paulo
 
 RUN corepack enable
 
-# Copia dist e package.json do backend
-COPY --from=build /app/packages/backend/dist ./dist
-COPY --from=build /app/packages/backend/package.json ./package.json
-
-# Copia arquivos de config e .yarn
-COPY --from=build /app/yarn.lock ./
+# Copia arquivos essenciais para rodar o backend com Yarn PnP
+COPY --from=build /app/.pnp.cjs ./
+COPY --from=build /app/packages/backend/package.json ./packages/backend/package.json
+COPY --from=build /app/packages/backend/dist ./packages/backend/dist
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/yarn.lock ./yarn.lock
+COPY --from=build /app/.yarnrc.yml ./.yarnrc.yml
 COPY --from=build /app/.yarn ./.yarn
-COPY --from=build /app/.yarnrc.yml ./
 
-RUN yarn install --production
+# Instala apenas o backend em produção, sem devDependencies
+RUN yarn workspaces focus backend --production
 
 EXPOSE 7007
 
-CMD ["node", "dist/index.cjs.js"]
+CMD ["node", "packages/backend/dist/index.cjs.js"]
