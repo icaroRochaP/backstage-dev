@@ -1,57 +1,48 @@
-# --- Estágio 1: Instala dependências de todos os workspaces ---
+# --- Estágio 1: Dependências ---
 FROM node:20-slim AS dependencies
 
 WORKDIR /app
 
-# Instala build deps básicas
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3
 
-# Ativa Corepack e garante Yarn 4.4.1 (ou o que estiver no .yarnrc.yml)
 RUN corepack enable
 
-# Copia config de Yarn
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
-
-# Copia os workspaces
 COPY packages ./packages
 
-# Instala TODAS as dependências (desenvolvimento incluso)
 RUN yarn install --immutable
 
 
-# --- Estágio 2: Build do backend ---
+# --- Estágio 2: Build completo (app + backend) ---
 FROM node:20-slim AS build
 
 WORKDIR /app
 
-# Copia tudo do estágio anterior (com node_modules/linkers se for o caso)
 COPY --from=dependencies /app .
 
-# Roda o build do backend
-RUN yarn workspace backend build
+# Build completo do Backstage (gera dist/backend/index.js)
+RUN yarn build
 
 
-# --- Estágio 3: Imagem final de produção ---
+# --- Estágio 3: Produção ---
 FROM node:20-slim AS production
 
 WORKDIR /app
 
+ENV NODE_ENV=production
 ENV TZ=America/Sao_Paulo
 
-# Ativa corepack e garante Yarn na versão do projeto
 RUN corepack enable
 
-# Copia apenas os arquivos essenciais do backend
-COPY --from=build /app/packages/backend ./packages/backend
-COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
+# Copia apenas os arquivos necessários para rodar o backend
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/yarn.lock /app/package.json /app/.yarnrc.yml ./
 COPY --from=build /app/.yarn ./.yarn
 
-# Instala apenas dependências de produção do backend
-RUN yarn workspaces focus --production --all
+# Instala só deps de produção
+RUN yarn install --production --immutable
 
-# Expõe porta padrão do backend do Backstage
 EXPOSE 7007
 
-# Comando de inicialização
-CMD ["node", "packages/backend"]
+CMD ["node", "dist/backend"]
