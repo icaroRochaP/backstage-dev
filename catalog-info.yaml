@@ -2,12 +2,15 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: backstage-dev
-  description: An example of a Backstage application.
-  # Example for optional annotations
-  # annotations:
-  #   github.com/project-slug: backstage/backstage
-  #   backstage.io/techdocs-ref: dir:.
+  description: A central hub for all my development and infrastructure needs.
+  annotations:
+    # A URL do seu repositório Backstage. Isso vincula a entidade ao repositório.
+    github.com/project-slug: icaroRochaP/backstage-dev
+    # Esta anotação diz ao Backstage para procurar por documentação na raiz do repositório.
+    # O valor 'dir:.' significa "olhar no diretório atual".
+    backstage.io/techdocs-ref: dir:.
 spec:
   type: website
-  owner: john@example.com
-  lifecycle: experimental
+  # Troque "john@example.com" pelo seu nome de usuário ou o nome do seu time
+  owner: icaro-rocha
+  lifecycle: production # Alterei de "experimental" para "production" para indicar o estado
