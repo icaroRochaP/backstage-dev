@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Defina o diretório de trabalho
 WORKDIR /app
 
+# Habilite o Corepack para usar a versão correta do Yarn
+RUN corepack enable
+
 # Copie o package.json e instale as dependências
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
