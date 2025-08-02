@@ -1,8 +1,20 @@
+# Arquivos e pastas do Git
 .git
-.yarn/cache
-.yarn/install-state.gz
+.github
+.gitattributes
+.gitignore
+
+# Dependências locais que não devem ser copiadas para o Docker
 node_modules
-packages/*/src
-packages/*/node_modules
-plugins
-*.local.yaml
+
+# Arquivos de log e de ambiente local
+*.log
+.env
+.DS_Store
+
+# Saídas de build e cache que não devem ser copiadas
+# (serão geradas dentro do contêiner)
+dist
+dist-types
+coverage
+.cache

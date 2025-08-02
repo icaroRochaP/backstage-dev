@@ -1,47 +1,71 @@
-# --- Stage 1: Build ---
-# Usa a imagem do Node para construir o projeto.
-FROM node:18-slim as build
+# --- Estágio 1: Base de Dependências ---
+# Define a versão do Node.js consistente com o seu package.json (Node 20).
+# Este estágio foca apenas em instalar as dependências para maximizar o cache.
+FROM node:20-slim AS dependencies
 
 # Define o diretório de trabalho.
 WORKDIR /app
 
-# Habilita o Corepack para garantir que a versão correta do Yarn seja usada.
+# Instala as ferramentas essenciais de build para compilar dependências nativas.
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3
+
+# Habilita o Corepack para usar a versão correta do Yarn.
 RUN corepack enable
 
-# Copia os arquivos de configuração de dependências.
-COPY package.json yarn.lock ./
+# Copia apenas os arquivos necessários para a instalação de dependências.
+# Isso melhora o cache, pois o 'yarn install' só será executado novamente
+# se um desses arquivos mudar.
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+COPY packages packages
 
-# Instala as dependências. Adicionamos um comentário para forçar a rebuild.
-RUN yarn install --immutable --immutable-cache # rebuild-fix-v1
+# Instala todas as dependências (dev e prod) de forma imutável.
+# As dependências de desenvolvimento são necessárias para o estágio de build.
+RUN yarn install --immutable
 
-# Copia o restante do código da aplicação.
-COPY . .
 
-# Faz a build das aplicações do Backstage.
-RUN yarn tsc
-RUN yarn build:api
-RUN yarn build
+# --- Estágio 2: Build ---
+# Este estágio usa as dependências do estágio anterior e compila a aplicação.
+FROM node:20-slim AS build
 
-# --- Stage 2: Final ---
-# Usa uma imagem mais leve para o contêiner final em produção.
-FROM node:18-slim
-
-# Define o diretório de trabalho.
 WORKDIR /app
 
-# Copia a aplicação construída do estágio anterior (build).
-COPY --from=build /app/packages/backend/dist ./packages/backend/dist
-COPY --from=build /app/packages/backend/dist-types ./packages/backend/dist-types
-COPY --from=build /app/packages/app/dist ./packages/app/dist
+# Copia as dependências e o código-fonte já instalados do estágio anterior.
+# Esta é a única fonte de verdade para o código, evitando problemas com .dockerignore.
+COPY --from=dependencies /app .
 
-# Copia arquivos de configuração e outros recursos necessários.
-COPY --from=build /app/app-config.yaml ./
-COPY --from=build /app/package.json ./
-COPY --from=build /app/yarn.lock ./
-COPY --from=build /app/.yarn ./.yarn
-COPY --from=build /app/.pnp.* ./
-COPY --from=build /app/backstage.json ./
+# --- DEPURAÇÃO ---
+# Lista o conteúdo em cada nível do caminho para encontrar o ponto de falha.
+RUN echo "--- Listing /app ---" && ls -lA /app
+RUN echo "--- Listing /app/packages ---" && ls -lA /app/packages
+RUN echo "--- Listing /app/packages/backend ---" && ls -lA /app/packages/backend
+RUN echo "--- Listing /app/packages/backend/src ---" && ls -lA /app/packages/backend/src
 
-# Expõe a porta e define o comando de execução para o backend do Backstage.
+
+# Executa o build do backend. Este comando gera um pacote otimizado
+# para produção em 'packages/backend/dist'.
+RUN yarn build:backend
+
+
+# --- Estágio 3: Final ---
+# Este é o estágio final, que resulta na imagem de produção.
+# É uma imagem leve, contendo apenas o necessário para rodar o backend.
+FROM node:20-slim
+
+WORKDIR /app
+
+# Define o fuso horário (opcional, mas recomendado para logs consistentes).
+ENV TZ=America/Sao_Paulo
+
+# Copia o pacote do backend (bundle) e o arquivo de configuração do estágio de build.
+COPY --from=build /app/packages/backend/dist/bundle.tar.gz /app/app-config.yaml ./
+
+# Descompacta o pacote do backend.
+RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
+
+# Expõe a porta que o backend do Backstage usará.
 EXPOSE 7007
-CMD ["yarn", "start-backend"]
+
+# Define o comando para iniciar o servidor.
+# Ele executa o backend a partir do pacote descompactado.
+CMD ["node", "packages/backend"]
