@@ -8,7 +8,6 @@ services:
     ports:
       - '7007:7007'
     environment:
-      # Variáveis de ambiente que serão passadas para o contêiner do Backstage
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -16,23 +15,30 @@ services:
       - POSTGRES_DATABASE=${POSTGRES_DATABASE}
     depends_on:
       postgres:
-        condition: service_healthy # Espera o Postgres passar no healthcheck
+        condition: service_healthy
+    networks:
+      - dokploy-network # Usa a rede externa do Dokploy
 
   postgres:
     image: postgres:13
     restart: always
     environment:
-      # Variáveis de ambiente para a imagem do Postgres
       - POSTGRES_USER=backstage
       - POSTGRES_PASSWORD=spc1f1qhoeow3dzx
       - POSTGRES_DB=backstage
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    healthcheck: # Adiciona um healthcheck para o serviço do Postgres
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U backstage -d backstage"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dokploy-network # Usa a rede externa do Dokploy
 
 volumes:
   postgres-data:
+
+networks:
+  dokploy-network:
+    external: true
