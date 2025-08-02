@@ -1,5 +1,5 @@
 # Use uma imagem base com Node.js e Yarn
-FROM node:18-alpine
+FROM node:18-slim
 
 # Defina o diretório de trabalho
 WORKDIR /app
