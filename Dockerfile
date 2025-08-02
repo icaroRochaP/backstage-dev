@@ -9,8 +9,8 @@ RUN corepack enable
 
 # Copie o package.json e instale as dependências
 COPY package.json yarn.lock ./
-# Use o comando de instalação mais moderno
-RUN yarn install --immutable --immutable-cache
+# Remova as flags de imutabilidade para permitir a instalação
+RUN yarn install
 
 # Copie o restante do código
 COPY . .
