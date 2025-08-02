@@ -16,8 +16,8 @@ RUN yarn install
 # Copie o restante do código
 COPY . .
 
-# Construa a aplicação
-RUN yarn build
+# Construa a aplicação (esta é a linha que mudou)
+RUN yarn build --filter=...
 
 # Exponha a porta que o Backstage usa
 EXPOSE 7007
