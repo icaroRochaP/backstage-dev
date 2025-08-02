@@ -4,12 +4,13 @@ FROM node:18-alpine
 # Defina o diretório de trabalho
 WORKDIR /app
 
-# Habilite o Corepack para usar a versão correta do Yarn
+# Habilite o Corepack
 RUN corepack enable
 
-# Copie o package.json e instale as dependências
+# Copie apenas os arquivos de configuração de dependências
 COPY package.json yarn.lock ./
-# Remova as flags de imutabilidade para permitir a instalação
+
+# Instale as dependências
 RUN yarn install
 
 # Copie o restante do código
