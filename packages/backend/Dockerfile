@@ -34,9 +34,9 @@ ENV TZ=America/Sao_Paulo
 COPY --from=build /app/packages/backend/dist/bundle.tar.gz ./
 
 # Copia arquivos essenciais para instalar dependências no container final
-COPY packages/backend/package.json ./
-COPY packages/backend/yarn.lock ./
-COPY app-config.yaml ./
+COPY ./packages/backend/package.json ./package.json
+COPY ./packages/backend/yarn.lock ./yarn.lock
+COPY ./app-config.yaml ./app-config.yaml
 
 # Descompacta o bundle
 RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
