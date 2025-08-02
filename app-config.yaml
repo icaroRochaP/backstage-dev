@@ -48,8 +48,7 @@ auth:
     guest: {}
 
 scaffolder:
-  # Ações do Scaffolder, como o publish:github, precisam de configuração
-  # owner: 'user:default/icaro-rocha'
+  owner: icaro-rocha
   
 catalog:
   import:
@@ -58,24 +57,19 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, Template]
   locations:
-    # 1. Aponta para o seu próprio catalog-info.yaml que está na raiz do seu repositório Backstage
+    # Aponta para o seu próprio catalog-info.yaml que está na raiz do seu repositório Backstage
     - type: file
       target: catalog-info.yaml
       
-    # 2. **NOVA ENTRADA:** Aponta para o seu repositório de templates inteiro
-    - type: url
-      target: 'https://github.com/icaroRochaP/robot-framework-automacao-api'
-      rules:
-        - allow: [Component, Template] # Permite que o Backstage encontre arquivos de catálogo lá
-    
-    # 3. Mantenha a entrada do template.yaml para garantir que o Scaffolder saiba qual é a receita
+    # Aponta para o seu template de automação de teste no GitHub usando a URL RAW
     - type: url
       target: 'https://raw.githubusercontent.com/icaroRochaP/robot-framework-automacao-api/main/template.yaml'
       rules:
         - allow: [Template]
         
 kubernetes:
-  # Configure se você usar o plugin do Kubernetes
-  #
+  # O plugin kubernetes está ativado na sua imagem docker, mas não configurado.
+  # Se você não for usá-lo, remova esta seção ou adicione as configurações necessárias.
+  
 permission:
   enabled: true
