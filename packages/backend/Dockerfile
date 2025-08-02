@@ -1,57 +1,68 @@
-# This dockerfile builds an image for the backend package.
-# It should be executed with the root of the repo as docker context.
-#
-# Before building this image, be sure to have run the following commands in the repo root:
-#
-# yarn install
-# yarn tsc
-# yarn build:backend
-#
-# Once the commands have been run, you can build the image using `yarn build-image`
+# --- Etapa 1: Builder (para compilar a aplicação) ---
+# Usa a imagem base do Node.js para o ambiente de build
+FROM node:20-bookworm-slim AS builder
 
-FROM node:20-bookworm-slim
-
-# Install sqlite3 dependencies. You can skip this if you don't use sqlite3 in the image,
-# in which case you should also move better-sqlite3 to "devDependencies" in package.json.
-# Additionally, we install dependencies for `techdocs.generator.runIn: local`.
-# https://backstage.io/docs/features/techdocs/getting-started#disabling-docker-in-docker-situation-optional
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends libsqlite3-dev python3 python3-pip python3-venv build-essential && \
+# Instala dependências de sistema (sqlite3, python, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlite3-dev python3 python3-pip python3-venv build-essential && \
     yarn config set python /usr/bin/python3
 
-# Set up a virtual environment for mkdocs-techdocs-core.
+# Configura o ambiente
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 RUN pip3 install mkdocs-techdocs-core==1.1.7
 
-# From here on we use the least-privileged `node` user to run the backend.
 WORKDIR /app
-RUN chown node:node /app
+# Copia arquivos importantes para o gerenciamento de pacotes
+COPY .yarn ./.yarn
+COPY .yarnrc.yml ./
+COPY package.json yarn.lock ./
+COPY packages/backend/package.json packages/backend/
+
+# Instala as dependências, incluindo as de desenvolvimento
+RUN yarn install --immutable
+
+# Copia todo o código-fonte
+COPY . ./
+
+# Executa o build da aplicação Backstage
+RUN yarn tsc
+RUN yarn build:backend
+
+# --- Etapa 2: Runner (para a imagem de produção) ---
+# Usa uma imagem base mais leve para a imagem final de produção
+FROM node:20-bookworm-slim
+
+# Instala as dependências de sistema para o ambiente de produção
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlite3-dev python3 python3-pip python3-venv
+
+# Configura o ambiente Python para o TechDocs
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN pip3 install mkdocs-techdocs-core==1.1.7
+
+# Usa o usuário `node`
+WORKDIR /app
 USER node
 
+# Copia os artefatos compilados da etapa anterior
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/yarn.lock ./
+COPY --from=builder /app/.yarn ./.yarn
+COPY --from=builder /app/.yarnrc.yml ./
+COPY --from=builder /app/packages/backend/dist/skeleton.tar.gz ./
+COPY --from=builder /app/packages/backend/dist/bundle.tar.gz ./
 
-# This switches many Node.js dependencies to production mode.
-ENV NODE_ENV=production
-
-# Copy over Yarn 3 configuration, release, and plugins
-COPY --chown=node:node .yarn ./.yarn
-COPY --chown=node:node .yarnrc.yml ./
-
-# Copy repo skeleton first, to avoid unnecessary docker cache invalidation.
-# The skeleton contains the package.json of each package in the monorepo,
-# and along with yarn.lock and the root package.json, that's enough to run yarn install.
-COPY --chown=node:node yarn.lock package.json packages/backend/dist/skeleton.tar.gz ./
+# Instala as dependências de produção
 RUN tar xzf skeleton.tar.gz && rm skeleton.tar.gz
-
-RUN --mount=type=cache,target=/home/node/.yarn/berry/cache,sharing=locked,uid=1000,gid=1000 \
-    yarn workspaces focus --all --production
-
-# Then copy the rest of the backend bundle, along with any other files we might want.
-COPY --chown=node:node packages/backend/dist/bundle.tar.gz app-config*.yaml ./
+RUN yarn workspaces focus --all --production
 RUN tar xzf bundle.tar.gz && rm bundle.tar.gz
 
+# Copia os arquivos de configuração
+COPY --from=builder /app/app-config*.yaml ./
+
+# Define o comando de inicialização
 CMD ["node", "packages/backend", "--config", "app-config.yaml"]
