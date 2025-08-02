@@ -34,15 +34,13 @@ ENV TZ=America/Sao_Paulo
 
 RUN corepack enable
 
-COPY --from=build /app/packages/backend/dist/bundle.tar.gz ./
 COPY --from=build /app/packages/backend ./packages/backend
 COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
 COPY --from=build /app/.yarn ./.yarn
 
 RUN yarn workspaces focus --production --all
 
-RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
-
 EXPOSE 7007
 
-CMD ["node", "backend.cjs.js"]
+# ✅ Arquivo correto do backend
+CMD ["node", "packages/backend/dist/index.cjs.js"]
