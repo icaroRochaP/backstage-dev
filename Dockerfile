@@ -29,6 +29,7 @@ COPY . ./
 RUN yarn tsc
 RUN yarn build:backend
 
+
 # --- Etapa 2: Runner (para a imagem de produção final) ---
 FROM node:20-bookworm-slim
 

@@ -57,18 +57,16 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, Template]
   locations:
-    # CORRIGIDO: O caminho agora é relativo ao diretório do backend (packages/backend)
+    # O arquivo local agora é relativo a `app/`
     - type: file
-      target: ../../catalog-info.yaml
+      target: catalog-info.yaml
       
-    # A URL para o seu template de automação de teste no GitHub usando a URL RAW
+    # A URL para o seu template de automação de teste no GitHub
     - type: url
       target: 'https://raw.githubusercontent.com/icaroRochaP/robot-framework-automacao-api/main/template.yaml'
       rules:
         - allow: [Template]
         
 kubernetes:
-  # Configure se você usar o plugin do Kubernetes
-  #
-permission:
-  enabled: true
+  permission:
+    enabled: true

@@ -4,20 +4,16 @@ services:
   backstage:
     build:
       context: .
-      dockerfile: packages/backend/Dockerfile
+      dockerfile: Dockerfile # O Dockerfile agora está na raiz
     ports:
       - '7007:7007'
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - dokploy-network # Usa a rede externa do Dokploy
+      - dokploy-network
 
   postgres:
     image: postgres:13
@@ -34,7 +30,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - dokploy-network # Usa a rede externa do Dokploy
+      - dokploy-network
 
 volumes:
   postgres-data:
