@@ -18,11 +18,10 @@ backend:
   database:
     client: pg
     connection:
-      host: postgres
-      port: 5432
-      user: backstage
-      password: spc1f1qhoeow3dzx
-      database: backstage
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
 
 integrations:
   github:
@@ -57,15 +56,9 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, Template]
   locations:
-    # Aponta para o seu próprio catalog-info.yaml que está na raiz do seu repositório Backstage
+    # Aponte APENAS para o seu próprio catalog-info.yaml que está na raiz do seu repositório Backstage
     - type: file
       target: catalog-info.yaml
-      
-    # Aponta para o seu template de automação de teste no GitHub usando a URL RAW
-    - type: url
-      target: 'https://raw.githubusercontent.com/icaroRochaP/robot-framework-automacao-api/main/template.yaml'
-      rules:
-        - allow: [Template]
         
 kubernetes:
   # O plugin kubernetes está ativado na sua imagem docker, mas não configurado.
