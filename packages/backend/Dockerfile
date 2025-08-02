@@ -1,4 +1,5 @@
 # --- Etapa 1: Builder (para compilar a aplicação) ---
+# O contexto de build é a raiz do seu projeto
 FROM node:20-bookworm-slim AS builder
 
 # Instala dependências de sistema para o sqlite3, techdocs e outras ferramentas
@@ -15,27 +16,26 @@ RUN pip3 install mkdocs-techdocs-core==1.1.7
 # Define o diretório de trabalho dentro do contêiner
 WORKDIR /app
 
-# Copia o script de espera do banco de dados para a imagem
-COPY wait-for-db.sh ./
+# Copia o script de espera do banco de dados da RAIZ do projeto para a imagem
+COPY ./wait-for-db.sh ./
 
-# Copia os arquivos de configuração do Yarn e do projeto
-COPY .yarn ./.yarn
-COPY .yarnrc.yml ./
-COPY package.json yarn.lock ./
+# Copia os arquivos de configuração do Yarn e do projeto da RAIZ do projeto
+COPY ./.yarn ./.yarn
+COPY ./package.json ./yarn.lock ./
+COPY ./.yarnrc.yml ./
 
 # Copia o esqueleto do projeto (apenas os arquivos package.json de cada pacote)
-COPY packages/ packages/
+COPY ./packages ./packages
 
 # Instala as dependências do projeto (incluindo as de desenvolvimento)
 RUN yarn install --immutable
 
-# Copia todo o código-fonte restante
+# Copia todo o código-fonte restante do projeto (aqui está o restante do backend)
 COPY . ./
 
 # Executa o build da aplicação Backstage
 RUN yarn tsc
 RUN yarn build:backend
-
 
 # --- Etapa 2: Runner (para a imagem de produção final) ---
 FROM node:20-bookworm-slim
@@ -75,9 +75,9 @@ RUN yarn workspaces focus --all --production
 RUN tar xzf bundle.tar.gz && rm bundle.tar.gz
 
 # Copia os arquivos de configuração da aplicação e o catalog-info.yaml
-COPY --from=builder --chown=node:node /app/app-config*.yaml ./
-# ADICIONADO: Copia o arquivo de catálogo local para a imagem final
-COPY --from=builder --chown=node:node /app/catalog-info.yaml ./
+COPY ./app-config*.yaml ./
+# ADICIONADO: Copia o arquivo de catálogo local da RAIZ do projeto para a imagem final
+COPY ./catalog-info.yaml ./
 
 # Define o comando de inicialização da aplicação, usando o script de espera
 CMD ["./wait-for-db.sh", "postgres", "node", "packages/backend", "--config", "app-config.yaml"]
