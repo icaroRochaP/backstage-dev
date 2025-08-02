@@ -21,7 +21,6 @@ WORKDIR /app
 
 COPY --from=dependencies /app .
 
-# Gera o bundle.tar.gz no backend
 RUN yarn workspace backend build
 
 
@@ -35,18 +34,15 @@ ENV TZ=America/Sao_Paulo
 
 RUN corepack enable
 
-# Copia apenas os arquivos necessários
 COPY --from=build /app/packages/backend/dist/bundle.tar.gz ./
 COPY --from=build /app/packages/backend ./packages/backend
 COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
 COPY --from=build /app/.yarn ./.yarn
 
-# Instala somente o workspace do backend com deps de produção
 RUN yarn workspaces focus --production --all
 
-# Extrai o bundle do backend
 RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
 
 EXPOSE 7007
 
-CMD ["node", "backend"]
+CMD ["node", "backend.cjs.js"]
