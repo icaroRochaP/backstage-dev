@@ -49,7 +49,6 @@ auth:
 
 scaffolder:
   # Ações do Scaffolder, como o publish:github, precisam de configuração
-  # Adicione o seu ownwer aqui
   # owner: 'user:default/icaro-rocha'
   
 catalog:
@@ -59,10 +58,19 @@ catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, Template]
   locations:
+    # 1. Aponta para o seu próprio catalog-info.yaml que está na raiz do seu repositório Backstage
     - type: file
       target: catalog-info.yaml
+      
+    # 2. **NOVA ENTRADA:** Aponta para o seu repositório de templates inteiro
     - type: url
-      target: 'https://github.com/icaroRochaP/robot-framework-automacao-api/blob/main/template.yaml'
+      target: 'https://github.com/icaroRochaP/robot-framework-automacao-api'
+      rules:
+        - allow: [Component, Template] # Permite que o Backstage encontre arquivos de catálogo lá
+    
+    # 3. Mantenha a entrada do template.yaml para garantir que o Scaffolder saiba qual é a receita
+    - type: url
+      target: 'https://raw.githubusercontent.com/icaroRochaP/robot-framework-automacao-api/main/template.yaml'
       rules:
         - allow: [Template]
         
