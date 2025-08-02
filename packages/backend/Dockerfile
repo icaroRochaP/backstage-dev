@@ -74,8 +74,10 @@ RUN tar xzf skeleton.tar.gz && rm skeleton.tar.gz
 RUN yarn workspaces focus --all --production
 RUN tar xzf bundle.tar.gz && rm bundle.tar.gz
 
-# Copia os arquivos de configuração da aplicação
+# Copia os arquivos de configuração da aplicação e o catalog-info.yaml
 COPY --from=builder --chown=node:node /app/app-config*.yaml ./
+# ADICIONADO: Copia o arquivo de catálogo local para a imagem final
+COPY --from=builder --chown=node:node /app/catalog-info.yaml ./
 
 # Define o comando de inicialização da aplicação, usando o script de espera
 CMD ["./wait-for-db.sh", "postgres", "node", "packages/backend", "--config", "app-config.yaml"]
