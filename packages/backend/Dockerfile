@@ -13,14 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 RUN corepack enable
 
 # Copia apenas os arquivos necessários para a instalação de dependências.
-# Isso melhora o cache, pois o 'yarn install' só será executado novamente
-# se um desses arquivos mudar.
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 COPY packages packages
 
 # Instala todas as dependências (dev e prod) de forma imutável.
-# As dependências de desenvolvimento são necessárias para o estágio de build.
 RUN yarn install --immutable
 
 
@@ -31,28 +28,25 @@ FROM node:20-slim AS build
 WORKDIR /app
 
 # Copia as dependências e o código-fonte já instalados do estágio anterior.
-# Esta é a única fonte de verdade para o código, evitando problemas com .dockerignore.
 COPY --from=dependencies /app .
 
-# Executa o build do backend. Este comando gera um pacote otimizado
-# para produção em 'packages/backend/dist'.
+# Executa o build do backend.
 RUN yarn build:backend
 
 
 # --- Estágio 3: Final ---
 # Este é o estágio final, que resulta na imagem de produção.
-# É uma imagem leve, contendo apenas o necessário para rodar o backend.
 FROM node:20-slim
 
 WORKDIR /app
 
-# Define o fuso horário (opcional, mas recomendado para logs consistentes).
+# Define o fuso horário para logs consistentes.
 ENV TZ=America/Sao_Paulo
 
 # Copia o pacote do backend (bundle) do estágio de build.
 COPY --from=build /app/packages/backend/dist/bundle.tar.gz ./
 
-# Copia o arquivo de configuração diretamente do contexto de build inicial.
+# Copia o arquivo de configuração diretamente do contexto local.
 COPY app-config.yaml ./
 
 # Descompacta o pacote do backend.
@@ -61,6 +55,5 @@ RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
 # Expõe a porta que o backend do Backstage usará.
 EXPOSE 7007
 
-# Define o comando para iniciar o servidor.
-# Ele executa o backend a partir do pacote descompactado.
+# Inicia o backend.
 CMD ["node", "packages/backend"]
