@@ -14,14 +14,15 @@ COPY packages ./packages
 RUN yarn install --immutable
 
 
-# --- Estágio 2: Build completo (gera dist/backend/index.js) ---
+# --- Estágio 2: Build do backend ---
 FROM node:20-slim AS build
 
 WORKDIR /app
 
 COPY --from=dependencies /app .
 
-RUN yarn backstage-cli build
+# Gera o bundle.tar.gz no backend
+RUN yarn workspace backend build
 
 
 # --- Estágio 3: Produção ---
@@ -34,12 +35,18 @@ ENV TZ=America/Sao_Paulo
 
 RUN corepack enable
 
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/yarn.lock /app/package.json /app/.yarnrc.yml ./
+# Copia apenas os arquivos necessários
+COPY --from=build /app/packages/backend/dist/bundle.tar.gz ./
+COPY --from=build /app/packages/backend ./packages/backend
+COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
 COPY --from=build /app/.yarn ./.yarn
 
-RUN yarn install --production --immutable
+# Instala somente o workspace do backend com deps de produção
+RUN yarn workspaces focus --production --all
+
+# Extrai o bundle do backend
+RUN tar -xzf bundle.tar.gz && rm bundle.tar.gz
 
 EXPOSE 7007
 
-CMD ["node", "dist/backend"]
+CMD ["node", "backend"]
