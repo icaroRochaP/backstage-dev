@@ -30,11 +30,11 @@ backend:
   database:
     client: pg
     connection:
-      host: ${POSTGRES_HOST}
-      port: ${POSTGRES_PORT}
-      user: ${POSTGRES_USER}
-      password: ${POSTGRES_PASSWORD}
-      database: ${POSTGRES_DATABASE}
+      host: postgres
+      port: 5432
+      user: backstage
+      password: spc1f1qhoeow3dzx
+      database: backstage
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
 
 integrations:
