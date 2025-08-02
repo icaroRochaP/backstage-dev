@@ -9,7 +9,8 @@ RUN corepack enable
 
 # Copie o package.json e instale as dependências
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+# Use o comando de instalação mais moderno
+RUN yarn install --immutable --immutable-cache
 
 # Copie o restante do código
 COPY . .
